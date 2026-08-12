@@ -1,0 +1,1293 @@
+<div id="pfs-app"></div>
+<style>
+  #pfs-app {
+    --bg: #f6f5f0;
+    --surface: #ffffff;
+    --ink: #1e2a24;
+    --ink-soft: #5c6b62;
+    --pine: #2f6e5c;
+    --pine-tint: #e4efea;
+    --amber: #c98a3e;
+    --amber-tint: #f4e9d8;
+    --line: #dcd9cc;
+    --danger: #b85c4a;
+
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    padding: 28px 20px 60px;
+    max-width: 1180px;
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+  #pfs-app * { box-sizing: border-box; }
+
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--pine);
+  }
+  .title-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 22px;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 16px;
+  }
+  h1 {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin: 4px 0 0;
+  }
+  .month-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .month-nav button {
+    width: 30px; height: 30px;
+    border: 1px solid var(--ink);
+    background: var(--surface);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+  }
+  .month-nav button:hover { background: var(--pine); color: #fff; border-color: var(--pine); }
+  .month-label {
+    font-size: 15px;
+    font-weight: 700;
+    min-width: 140px;
+    text-align: center;
+  }
+
+  /* Tally strip — signature element */
+  .tally-wrap {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 18px 14px;
+    margin-bottom: 24px;
+  }
+  .tally-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+  }
+  .tally-head .eyebrow { margin: 0; }
+  .tally-legend { font-size: 11px; color: var(--ink-soft); display: flex; gap: 14px; }
+  .tally-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .dot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+  .tally-scroll { overflow-x: visible; padding-bottom: 2px; }
+  .tally-strip {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 46px;
+  }
+  .tally-day {
+    flex: 1 1 0;
+    min-width: 4px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    height: 100%;
+  }
+  .tally-bar { width: 100%; border-radius: 1px; }
+  .tally-bar.amber { background: var(--amber); }
+  .tally-bar.pine { background: var(--pine); margin-top: 1px; }
+  .tally-nums {
+    display: flex;
+    gap: 3px;
+    margin-top: 6px;
+  }
+  .tally-num {
+    flex: 1 1 0;
+    min-width: 4px;
+    text-align: center;
+    font-size: 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--ink-soft);
+  }
+
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .who-select {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .who-select label { font-weight: 700; }
+  .who-select select {
+    padding: 5px 8px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: inherit;
+    background: #fff;
+  }
+  .today-badge {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 20px;
+  }
+  .today-badge.done { background: var(--pine-tint); color: var(--pine); }
+  .today-badge.open { background: var(--amber-tint); color: var(--amber); }
+  .streak-badge {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 5px 12px;
+    border-radius: 20px;
+  }
+  .row-actions { display: flex; gap: 8px; margin-top: 4px; }
+  .row-actions button { margin-top: 0; }
+  .ghost-btn {
+    background: none !important;
+    color: var(--ink) !important;
+    border: 1px solid var(--line) !important;
+  }
+  .ghost-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 780px) { .cols { grid-template-columns: 1fr; } }
+
+  .view-toggle {
+    width: auto !important;
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: system-ui, sans-serif !important;
+  }
+  .locked-banner {
+    padding: 10px 18px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    background: #fbfbf8;
+    border-bottom: 1px solid var(--line);
+  }
+  .admin-loading, .admin-empty {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    padding: 10px 0;
+  }
+  .admin-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .admin-tab {
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: 20px;
+    cursor: pointer;
+    color: var(--ink-soft);
+    font-family: system-ui, sans-serif;
+  }
+  .admin-tab.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .year-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    margin-bottom: 16px;
+  }
+  .year-nav button {
+    width: 30px; height: 30px;
+    border: 1px solid var(--ink);
+    background: var(--surface);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .year-nav button:hover { background: var(--pine); color: #fff; border-color: var(--pine); }
+  .year-label { font-size: 16px; font-weight: 800; min-width: 60px; text-align: center; }
+  .headline {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    background: var(--pine-tint);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+  }
+  .kpi-delta {
+    font-size: 10.5px;
+    font-weight: 700;
+    margin-top: 5px;
+  }
+  .delta-up { color: var(--pine); }
+  .delta-down { color: var(--danger); }
+  .delta-flat { color: var(--ink-soft); }
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 780px) { .kpi-row { grid-template-columns: 1fr 1fr; } }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+  .kpi-num {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--pine);
+  }
+  .kpi-label {
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .breakdown-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 780px) { .breakdown-grid { grid-template-columns: 1fr; } }
+  .breakdown-block {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .breakdown-block .eyebrow { margin-bottom: 10px; }
+  .bar-row {
+    display: grid;
+    grid-template-columns: 120px 1fr 28px;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 12px;
+  }
+  .bar-label { color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-track { background: var(--pine-tint); border-radius: 4px; height: 10px; overflow: hidden; }
+  .bar-fill { background: var(--pine); height: 100%; }
+  .bar-count { text-align: right; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink-soft); }
+  .trend-block {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+  }
+  .trend-block .eyebrow { margin-bottom: 10px; }
+  .trend-table { font-size: 12.5px; }
+  .trend-table thead th { padding: 6px 10px; }
+  .trend-table tbody td { padding: 6px 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .trend-current td { font-weight: 700; color: var(--pine); }
+  .admin-note {
+    font-size: 11px;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+  .gate-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 40px 0;
+  }
+  .gate-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 28px 26px;
+    max-width: 320px;
+    width: 100%;
+    text-align: center;
+  }
+  .gate-card h2 {
+    font-size: 18px;
+    font-weight: 800;
+    margin: 6px 0 10px;
+  }
+  .gate-text {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    margin: 0 0 16px;
+  }
+  .gate-card input {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  .gate-error {
+    color: var(--danger);
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .gate-card button {
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 6px;
+    background: var(--ink);
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .gate-card button:hover { background: var(--pine); }
+  .toast {
+    position: fixed;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--ink);
+    color: #fff;
+    font-weight: 700;
+    font-size: 13.5px;
+    padding: 10px 20px;
+    border-radius: 24px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+    z-index: 999;
+    animation: toast-in 0.25s ease-out;
+  }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translate(-50%, -8px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .panel-head {
+    padding: 16px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--line);
+  }
+  .panel.anfragen .panel-head { background: var(--pine-tint); }
+  .panel.erteilungen .panel-head { background: var(--amber-tint); }
+  .panel-title { font-size: 15px; font-weight: 800; }
+  .panel-total {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+    font-weight: 700;
+    background: var(--surface);
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--line);
+  }
+
+  .entry-form {
+    padding: 14px 18px;
+    display: grid;
+    gap: 8px;
+    border-bottom: 1px solid var(--line);
+    background: #fbfbf8;
+  }
+  .entry-form .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .chip-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    display: block;
+    margin: 2px 0 -2px;
+  }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 20px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .panel.anfragen .chip.active { background: var(--pine); color: #fff; border-color: var(--pine); }
+  .panel.erteilungen .chip.active { background: var(--amber); color: #fff; border-color: var(--amber); }
+  .history-toggle {
+    display: block;
+    margin: 0 0 16px;
+    padding: 8px 0;
+    background: none;
+    border: none;
+    border-bottom: 1px dashed var(--line);
+    color: var(--ink-soft);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: system-ui, sans-serif;
+    width: 100%;
+    text-align: left;
+  }
+  .history-toggle:hover { color: var(--pine); }
+  .entry-form label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    display: block;
+    margin-bottom: 3px;
+  }
+  .entry-form input, .entry-form select {
+    width: 100%;
+    padding: 7px 8px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    background: #fff;
+    color: var(--ink);
+  }
+  .entry-form button:not(.chip) {
+    margin-top: 4px;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    color: #fff;
+  }
+  .panel.anfragen .entry-form button:not(.chip) { background: var(--pine); }
+  .panel.erteilungen .entry-form button:not(.chip) { background: var(--amber); }
+  .entry-form button:not(.chip):hover { filter: brightness(1.08); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    text-align: left;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  tbody td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #eeece3;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+  }
+  tbody tr:hover { background: #fafaf6; }
+  .del-btn {
+    border: none;
+    background: none;
+    color: var(--danger);
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    padding: 2px 4px;
+  }
+  .empty-row td {
+    text-align: center;
+    color: var(--ink-soft);
+    font-family: system-ui, sans-serif;
+    padding: 22px 10px;
+    font-size: 12.5px;
+  }
+
+  .footer-strip {
+    margin-top: 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .quote-badge {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-weight: 700;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 4px 12px;
+    border-radius: 20px;
+  }
+  .status { font-size: 11px; color: var(--ink-soft); }
+</style>
+
+<script>
+(function () {
+  const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+  const DIENSTLEISTUNGEN = ["wöchentlich", "14-täglich", "monatlich"];
+  const ANFRAGEARTEN = ["Homepage", "Telefonisch", "E-Mail"];
+  const QUELLEN = ["Suchmaschine", "Social Media", "Weiterempfehlung", "Fahrzeugwerbung"];
+  const MITARBEITER = ["Fiorella", "Tayron"];
+  const ADMIN_CODE = "AdminPFS";
+  const MOTIV_MESSAGES = [
+    "Stark erfasst! 💪",
+    "Sauber gemacht ✅",
+    "Weiter so!",
+    "Eintrag im Kasten!",
+    "Gut gemacht, dranbleiben!",
+    "Klasse erfasst!",
+    "Perfekt, nächster bitte!",
+  ];
+  const USER_KEY = "pfs-current-user";
+
+  const now = new Date();
+  let state = {
+    year: now.getFullYear(),
+    month: now.getMonth(), // 0-indexed
+    anfragen: [],
+    erteilungen: [],
+    loading: true,
+    status: "",
+    currentUser: MITARBEITER[0],
+    view: "entry",
+    adminData: null,
+    adminLoading: false,
+    adminScope: "month",
+    adminUnlocked: false,
+    adminCodeError: false,
+    historyOpen: true,
+    toastMessage: "",
+    toastVisible: false,
+    toastTimer: null,
+    form: {
+      af: { dienstleistung: null, anfrageart: null, quelle: null },
+      ef: { dienstleistung: null },
+    },
+  };
+
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function monthKey(y, m) { return `${y}-${pad(m + 1)}`; }
+  function storageKey() { return `pfs-reporting:${monthKey(state.year, state.month)}`; }
+  function todayISO() {
+    const y = state.year, m = state.month;
+    if (y === now.getFullYear() && m === now.getMonth()) {
+      return `${y}-${pad(m + 1)}-${pad(now.getDate())}`;
+    }
+    return `${y}-${pad(m + 1)}-01`;
+  }
+  function daysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
+  function fmtDate(iso) {
+    const [y, m, d] = iso.split("-");
+    return `${d}.${m}.${y}`;
+  }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  async function loadCurrentUser() {
+    try {
+      const res = await window.storage.get(USER_KEY, false);
+      if (res && MITARBEITER.includes(res.value)) state.currentUser = res.value;
+    } catch (e) { /* noch kein Nutzer gewählt — Standard bleibt */ }
+  }
+
+  async function setCurrentUser(name) {
+    state.currentUser = name;
+    render();
+    try { await window.storage.set(USER_KEY, name, false); } catch (e) { /* egal, wirkt nur lokal */ }
+  }
+
+  function resetForm(formKey) {
+    if (formKey === "af") state.form.af = { dienstleistung: null, anfrageart: null, quelle: null };
+    else state.form.ef = { dienstleistung: null };
+  }
+
+  function chipGroup(formKey, field, options) {
+    const selected = state.form[formKey][field];
+    return `<div class="chip-row">${options.map(o =>
+      `<button type="button" class="chip ${o === selected ? "active" : ""}" data-form="${formKey}" data-field="${field}" data-value="${o}">${o}</button>`
+    ).join("")}</div>`;
+  }
+
+  async function load() {
+    state.loading = true;
+    render();
+    try {
+      const res = await window.storage.get(storageKey(), true);
+      const val = res ? JSON.parse(res.value) : { anfragen: [], erteilungen: [] };
+      state.anfragen = val.anfragen || [];
+      state.erteilungen = val.erteilungen || [];
+      state.status = "";
+    } catch (e) {
+      state.anfragen = [];
+      state.erteilungen = [];
+      state.status = "";
+    }
+    state.loading = false;
+    render();
+  }
+
+  function isWeekday(y, m, d) {
+    const wd = new Date(y, m, d).getDay();
+    return wd !== 0 && wd !== 6;
+  }
+
+  function hasEntryOn(iso, user) {
+    return state.anfragen.some(e => e.datum === iso && (!user || e.wer === user))
+      || state.erteilungen.some(e => e.datum === iso && (!user || e.wer === user));
+  }
+
+  function computeStreak(user) {
+    // zählt aufeinanderfolgende Arbeitstage mit Eintrag, rückwärts ab heute, innerhalb des geladenen Monats
+    if (state.year !== now.getFullYear() || state.month !== now.getMonth()) return null;
+    let streak = 0;
+    let d = now.getDate();
+    while (d >= 1) {
+      if (!isWeekday(state.year, state.month, d)) { d--; continue; }
+      const iso = `${state.year}-${pad(state.month + 1)}-${pad(d)}`;
+      if (hasEntryOn(iso, user)) { streak++; d--; }
+      else break;
+    }
+    return streak;
+  }
+
+  async function save() {
+    try {
+      await window.storage.set(storageKey(), JSON.stringify({
+        anfragen: state.anfragen,
+        erteilungen: state.erteilungen,
+      }), true);
+      state.status = "Gespeichert";
+    } catch (e) {
+      state.status = "Speichern fehlgeschlagen";
+    }
+    render();
+    setTimeout(() => { state.status = ""; render(); }, 1800);
+  }
+
+  function isLocked() {
+    // gesperrt sobald wir uns im Folgemonat (oder später) befinden
+    return (state.year < now.getFullYear()) ||
+           (state.year === now.getFullYear() && state.month < now.getMonth());
+  }
+
+  async function loadAdminData() {
+    state.adminLoading = true;
+    render();
+    try {
+      const res = await window.storage.list("pfs-reporting:", true);
+      const keys = (res && res.keys) || [];
+      const monthly = [];
+      for (const k of keys) {
+        try {
+          const item = await window.storage.get(k, true);
+          const val = item ? JSON.parse(item.value) : { anfragen: [], erteilungen: [] };
+          monthly.push({
+            key: k.replace("pfs-reporting:", ""),
+            anfragen: val.anfragen || [],
+            erteilungen: val.erteilungen || [],
+          });
+        } catch (e) { /* einzelner Monat nicht lesbar — überspringen */ }
+      }
+      monthly.sort((a, b) => a.key.localeCompare(b.key));
+      state.adminData = monthly;
+    } catch (e) {
+      state.adminData = [];
+    }
+    state.adminLoading = false;
+    render();
+  }
+
+  function countBy(arr, field) {
+    const map = {};
+    arr.forEach(e => { map[e[field] || "–"] = (map[e[field] || "–"] || 0) + 1; });
+    return Object.entries(map).sort((a, b) => b[1] - a[1]);
+  }
+
+  function barRows(pairs, total) {
+    return pairs.map(([label, count]) => {
+      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+      return `<div class="bar-row">
+        <div class="bar-label">${label}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+        <div class="bar-count">${count}</div>
+      </div>`;
+    }).join("");
+  }
+
+  function changeMonth(delta) {
+    let m = state.month + delta;
+    let y = state.year;
+    if (m < 0) { m = 11; y -= 1; }
+    if (m > 11) { m = 0; y += 1; }
+    state.month = m; state.year = y;
+    load();
+  }
+
+  function countTodayEntries(user) {
+    const iso = todayISO();
+    return state.anfragen.filter(e => e.datum === iso && e.wer === user).length
+      + state.erteilungen.filter(e => e.datum === iso && e.wer === user).length;
+  }
+
+  function triggerMotivation() {
+    const streak = computeStreak(state.currentUser);
+    const todayCount = countTodayEntries(state.currentUser);
+    let msg;
+    if (streak !== null && streak > 0 && streak % 5 === 0) {
+      msg = `🔥 ${streak} Arbeitstage in Folge — stark!`;
+    } else if (todayCount === 1) {
+      msg = "Erster Eintrag heute — guter Start!";
+    } else {
+      msg = MOTIV_MESSAGES[Math.floor(Math.random() * MOTIV_MESSAGES.length)];
+    }
+    state.toastMessage = msg;
+    state.toastVisible = true;
+    render();
+    if (state.toastTimer) clearTimeout(state.toastTimer);
+    state.toastTimer = setTimeout(() => { state.toastVisible = false; render(); }, 2500);
+  }
+
+  function addAnfrage(entry) {
+    state.anfragen.push({ id: uid(), ...entry });
+    state.anfragen.sort((a, b) => a.datum.localeCompare(b.datum));
+    resetForm("af");
+    triggerMotivation();
+    save();
+  }
+  function addErteilung(entry) {
+    state.erteilungen.push({ id: uid(), ...entry });
+    state.erteilungen.sort((a, b) => a.datum.localeCompare(b.datum));
+    resetForm("ef");
+    triggerMotivation();
+    save();
+  }
+  function repeatLast(list) {
+    const arr = state[list];
+    if (!arr.length) return;
+    const last = arr[arr.length - 1];
+    const copy = { ...last, id: uid(), datum: todayISO(), wer: state.currentUser };
+    arr.push(copy);
+    arr.sort((a, b) => a.datum.localeCompare(b.datum));
+    triggerMotivation();
+    save();
+  }
+  function removeEntry(list, id) {
+    state[list] = state[list].filter(e => e.id !== id);
+    save();
+  }
+
+  function optionsHtml(arr) {
+    return arr.map(v => `<option value="${v}">${v}</option>`).join("");
+  }
+
+  function tallyHtml() {
+    const days = daysInMonth(state.year, state.month);
+    const counts = [];
+    for (let d = 1; d <= days; d++) {
+      const iso = `${state.year}-${pad(state.month + 1)}-${pad(d)}`;
+      counts.push({
+        d,
+        a: state.anfragen.filter(e => e.datum === iso).length,
+        e: state.erteilungen.filter(e => e.datum === iso).length,
+      });
+    }
+    const max = Math.max(1, ...counts.map(c => c.a + c.e));
+    const bars = counts.map(c => {
+      const aH = Math.round((c.a / max) * 36);
+      const eH = Math.round((c.e / max) * 36);
+      return `<div class="tally-day" title="${c.d}. — ${c.a} Anfrage(n), ${c.e} Erteilung(en)">
+        <div class="tally-bar amber" style="height:${eH}px"></div>
+        <div class="tally-bar pine" style="height:${aH}px"></div>
+      </div>`;
+    }).join("");
+    const nums = counts.map(c => `<div class="tally-num">${c.d}</div>`).join("");
+    return `<div class="tally-scroll"><div class="tally-strip">${bars}</div><div class="tally-nums">${nums}</div></div>`;
+  }
+
+  function anfragenRows() {
+    if (!state.anfragen.length) {
+      return `<tr class="empty-row"><td colspan="6">Noch keine Anfragen für diesen Monat erfasst.</td></tr>`;
+    }
+    return state.anfragen.map(e => `
+      <tr>
+        <td>${fmtDate(e.datum)}</td>
+        <td>${e.dienstleistung}</td>
+        <td>${e.anfrageart}</td>
+        <td>${e.quelle}</td>
+        <td>${e.wer || "–"}</td>
+        <td>${isLocked() ? "" : `<button class="del-btn" data-list="anfragen" data-id="${e.id}" title="Eintrag löschen">×</button>`}</td>
+      </tr>`).join("");
+  }
+  function erteilungenRows() {
+    if (!state.erteilungen.length) {
+      return `<tr class="empty-row"><td colspan="4">Noch keine Auftragserteilungen für diesen Monat erfasst.</td></tr>`;
+    }
+    return state.erteilungen.map(e => `
+      <tr>
+        <td>${fmtDate(e.datum)}</td>
+        <td>${e.dienstleistung}</td>
+        <td>${e.wer || "–"}</td>
+        <td>${isLocked() ? "" : `<button class="del-btn" data-list="erteilungen" data-id="${e.id}" title="Eintrag löschen">×</button>`}</td>
+      </tr>`).join("");
+  }
+
+  function changeYear(delta) {
+    state.year += delta;
+    render();
+  }
+
+  function findMonthRecord(key) {
+    return (state.adminData || []).find(x => x.key === key);
+  }
+
+  function prevMonthTotals() {
+    let m = state.month - 1, y = state.year;
+    if (m < 0) { m = 11; y -= 1; }
+    const rec = findMonthRecord(monthKey(y, m));
+    return rec ? { a: rec.anfragen.length, e: rec.erteilungen.length } : null;
+  }
+
+  function prevYearTotals(year) {
+    const recs = (state.adminData || []).filter(x => x.key.startsWith((year - 1) + "-"));
+    if (!recs.length) return null;
+    return {
+      a: recs.reduce((s, r) => s + r.anfragen.length, 0),
+      e: recs.reduce((s, r) => s + r.erteilungen.length, 0),
+    };
+  }
+
+  function deltaBadge(current, previous, label) {
+    if (previous === null || previous === undefined || previous === 0) return "";
+    const diff = current - previous;
+    const pct = Math.round((diff / previous) * 100);
+    const arrow = diff > 0 ? "↑" : diff < 0 ? "↓" : "→";
+    const cls = diff > 0 ? "delta-up" : diff < 0 ? "delta-down" : "delta-flat";
+    return `<div class="kpi-delta ${cls}">${arrow} ${Math.abs(pct)}% ${label}</div>`;
+  }
+
+  function headline(totalA, totalE, quote, prev, label) {
+    let trend = "";
+    if (prev && prev.a) {
+      const diff = totalA - prev.a;
+      if (diff > 0) trend = ` — ${diff} Anfrage${diff === 1 ? "" : "n"} mehr als ${label}`;
+      else if (diff < 0) trend = ` — ${Math.abs(diff)} Anfrage${Math.abs(diff) === 1 ? "" : "n"} weniger als ${label}`;
+      else trend = ` — gleich viele Anfragen wie ${label}`;
+    }
+    return `${totalA} Anfragen, ${totalE} Auftragserteilungen${quote === null ? "" : ` (${quote}% Quote)`}${trend}.`;
+  }
+
+  function gateHtml() {
+    return `
+      <div class="gate-wrap">
+        <div class="gate-card">
+          <div class="eyebrow">Admin-Bereich</div>
+          <h2>Code eingeben</h2>
+          <p class="gate-text">Der Admin-Bereich ist geschützt. Bitte Code eingeben, um fortzufahren.</p>
+          <input type="password" id="admin-code-input" placeholder="Code" autocomplete="off" />
+          ${state.adminCodeError ? `<div class="gate-error">Code falsch — bitte erneut versuchen.</div>` : ""}
+          <button type="button" id="admin-code-submit">Bestätigen</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function adminHtml(totalA, totalE, quote) {
+    if (state.adminLoading) {
+      return `<div class="admin-loading">Lädt Auswertung…</div>`;
+    }
+    const monthly = state.adminData || [];
+
+    const tabBar = `
+      <div class="admin-tabs">
+        <button class="admin-tab ${state.adminScope === "month" ? "active" : ""}" id="admin-tab-month">Monat</button>
+        <button class="admin-tab ${state.adminScope === "year" ? "active" : ""}" id="admin-tab-year">Jahr</button>
+      </div>`;
+
+    if (state.adminScope === "year") {
+      const yearMonths = monthly.filter(m => m.key.startsWith(state.year + "-"));
+      const anfragen = [].concat(...yearMonths.map(m => m.anfragen));
+      const erteilungen = [].concat(...yearMonths.map(m => m.erteilungen));
+      const yTotalA = anfragen.length, yTotalE = erteilungen.length;
+      const yQuote = yTotalA > 0 ? Math.round((yTotalE / yTotalA) * 100) : null;
+      const monthsWithData = yearMonths.filter(m => m.anfragen.length || m.erteilungen.length).length;
+      const avgPerMonth = monthsWithData > 0 ? (yTotalA / monthsWithData).toFixed(1) : "–";
+      const prevY = prevYearTotals(state.year);
+
+      const byDienstleistung = countBy(anfragen.concat(erteilungen), "dienstleistung");
+      const byAnfrageart = countBy(anfragen, "anfrageart");
+      const byQuelle = countBy(anfragen, "quelle");
+      const byMitarbeiter = countBy(anfragen.concat(erteilungen), "wer");
+
+      const monthRows = MONTHS.map((name, idx) => {
+        const key = monthKey(state.year, idx);
+        const m = yearMonths.find(mm => mm.key === key);
+        const a = m ? m.anfragen.length : 0;
+        const e = m ? m.erteilungen.length : 0;
+        const q = a > 0 ? Math.round((e / a) * 100) : null;
+        const isCurrentMonth = idx === now.getMonth() && state.year === now.getFullYear();
+        return `<tr ${isCurrentMonth ? 'class="trend-current"' : ""}>
+          <td>${name}</td><td>${a}</td><td>${e}</td><td>${q === null ? "–" : q + "%"}</td>
+        </tr>`;
+      }).join("");
+
+      return `
+        <div class="admin-wrap">
+          ${tabBar}
+          <div class="year-nav">
+            <button id="prevYear">‹</button>
+            <div class="year-label">${state.year}</div>
+            <button id="nextYear">›</button>
+          </div>
+          <div class="headline">${headline(yTotalA, yTotalE, yQuote, prevY, "im Vorjahr")}</div>
+          <div class="kpi-row">
+            <div class="kpi-card">
+              <div class="kpi-num">${yTotalA}</div><div class="kpi-label">Anfragen (Jahr)</div>
+              ${prevY ? deltaBadge(yTotalA, prevY.a, "vs. Vorjahr") : ""}
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-num">${yTotalE}</div><div class="kpi-label">Auftragserteilungen (Jahr)</div>
+              ${prevY ? deltaBadge(yTotalE, prevY.e, "vs. Vorjahr") : ""}
+            </div>
+            <div class="kpi-card"><div class="kpi-num">${yQuote === null ? "–" : yQuote + "%"}</div><div class="kpi-label">Erteilungsquote</div></div>
+            <div class="kpi-card"><div class="kpi-num">${avgPerMonth}</div><div class="kpi-label">Ø Anfragen / Monat</div></div>
+          </div>
+
+          <div class="breakdown-grid">
+            <div class="breakdown-block">
+              <div class="eyebrow">Nach Dienstleistung</div>
+              ${byDienstleistung.length ? barRows(byDienstleistung, yTotalA + yTotalE) : `<div class="admin-empty">Keine Daten</div>`}
+            </div>
+            <div class="breakdown-block">
+              <div class="eyebrow">Anfragen nach Anfrageart</div>
+              ${byAnfrageart.length ? barRows(byAnfrageart, yTotalA) : `<div class="admin-empty">Keine Daten</div>`}
+            </div>
+            <div class="breakdown-block">
+              <div class="eyebrow">Anfragen nach Quelle</div>
+              ${byQuelle.length ? barRows(byQuelle, yTotalA) : `<div class="admin-empty">Keine Daten</div>`}
+            </div>
+            <div class="breakdown-block">
+              <div class="eyebrow">Nach Mitarbeiter:in erfasst</div>
+              ${byMitarbeiter.length ? barRows(byMitarbeiter, yTotalA + yTotalE) : `<div class="admin-empty">Keine Daten</div>`}
+            </div>
+          </div>
+
+          <div class="trend-block">
+            <div class="eyebrow">Monate im ${state.year}</div>
+            <table class="trend-table">
+              <thead><tr><th>Monat</th><th>Anfragen</th><th>Auftragserteilungen</th><th>Quote</th></tr></thead>
+              <tbody>${monthRows}</tbody>
+            </table>
+          </div>
+
+          <div class="admin-note">Zugriff ist über einen Code geschützt — Änderungen an den Daten sind hier weiterhin nicht möglich.</div>
+        </div>
+      `;
+    }
+
+    const days = daysInMonth(state.year, state.month);
+    const workdaysSoFar = (() => {
+      let n = 0;
+      const lastDay = isLocked() ? days : Math.min(days, now.getDate());
+      for (let d = 1; d <= lastDay; d++) if (isWeekday(state.year, state.month, d)) n++;
+      return n;
+    })();
+    const avgPerDay = workdaysSoFar > 0 ? (totalA / workdaysSoFar).toFixed(1) : "–";
+    const prevM = prevMonthTotals();
+
+    const byDienstleistung = countBy(state.anfragen.concat(state.erteilungen), "dienstleistung");
+    const byAnfrageart = countBy(state.anfragen, "anfrageart");
+    const byQuelle = countBy(state.anfragen, "quelle");
+    const byMitarbeiter = countBy(state.anfragen.concat(state.erteilungen), "wer");
+
+    const trendRows = monthly.map(m => {
+      const a = m.anfragen.length, e = m.erteilungen.length;
+      const q = a > 0 ? Math.round((e / a) * 100) : null;
+      const isCurrent = m.key === monthKey(state.year, state.month);
+      return `<tr ${isCurrent ? 'class="trend-current"' : ""}>
+        <td>${m.key}</td><td>${a}</td><td>${e}</td><td>${q === null ? "–" : q + "%"}</td>
+      </tr>`;
+    }).join("");
+
+    return `
+      <div class="admin-wrap">
+        ${tabBar}
+        <div class="headline">${headline(totalA, totalE, quote, prevM, "im Vormonat")}</div>
+        <div class="kpi-row">
+          <div class="kpi-card">
+            <div class="kpi-num">${totalA}</div><div class="kpi-label">Anfragen</div>
+            ${prevM ? deltaBadge(totalA, prevM.a, "vs. Vormonat") : ""}
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-num">${totalE}</div><div class="kpi-label">Auftragserteilungen</div>
+            ${prevM ? deltaBadge(totalE, prevM.e, "vs. Vormonat") : ""}
+          </div>
+          <div class="kpi-card"><div class="kpi-num">${quote === null ? "–" : quote + "%"}</div><div class="kpi-label">Erteilungsquote</div></div>
+          <div class="kpi-card"><div class="kpi-num">${avgPerDay}</div><div class="kpi-label">Ø Anfragen / Arbeitstag</div></div>
+        </div>
+
+        <div class="breakdown-grid">
+          <div class="breakdown-block">
+            <div class="eyebrow">Nach Dienstleistung</div>
+            ${byDienstleistung.length ? barRows(byDienstleistung, totalA + totalE) : `<div class="admin-empty">Keine Daten</div>`}
+          </div>
+          <div class="breakdown-block">
+            <div class="eyebrow">Anfragen nach Anfrageart</div>
+            ${byAnfrageart.length ? barRows(byAnfrageart, totalA) : `<div class="admin-empty">Keine Daten</div>`}
+          </div>
+          <div class="breakdown-block">
+            <div class="eyebrow">Anfragen nach Quelle</div>
+            ${byQuelle.length ? barRows(byQuelle, totalA) : `<div class="admin-empty">Keine Daten</div>`}
+          </div>
+          <div class="breakdown-block">
+            <div class="eyebrow">Nach Mitarbeiter:in erfasst</div>
+            ${byMitarbeiter.length ? barRows(byMitarbeiter, totalA + totalE) : `<div class="admin-empty">Keine Daten</div>`}
+          </div>
+        </div>
+
+        <div class="trend-block">
+          <div class="eyebrow">Monatsverlauf (alle erfassten Monate)</div>
+          <table class="trend-table">
+            <thead><tr><th>Monat</th><th>Anfragen</th><th>Auftragserteilungen</th><th>Quote</th></tr></thead>
+            <tbody>${trendRows || `<tr class="empty-row"><td colspan="4">Noch keine Monate erfasst.</td></tr>`}</tbody>
+          </table>
+        </div>
+
+        <div class="admin-note">Zugriff ist über einen Code geschützt — Änderungen an den Daten sind hier weiterhin nicht möglich.</div>
+      </div>
+    `;
+  }
+
+  function render() {
+    const root = document.getElementById("pfs-app");
+    const totalA = state.anfragen.length;
+    const totalE = state.erteilungen.length;
+    const quote = totalA > 0 ? Math.round((totalE / totalA) * 100) : null;
+
+    root.innerHTML = `
+      ${state.toastVisible ? `<div class="toast">${state.toastMessage}</div>` : ""}
+      <div class="title-row">
+        <div>
+          <div class="eyebrow">Putzfrauenservice · Reporting</div>
+          <h1>Anfragen &amp; Auftragserteilungen</h1>
+        </div>
+        <div class="month-nav">
+          <button id="prevMonth">‹</button>
+          <div class="month-label">${MONTHS[state.month]} ${state.year}</div>
+          <button id="nextMonth">›</button>
+          <button id="toggleView" class="view-toggle">${state.view === "entry" ? "Admin-Ansicht" : "← Zur Erfassung"}</button>
+        </div>
+      </div>
+
+      <div class="status-row">
+        <div class="who-select">
+          <label>Ich bin</label>
+          <select id="who-select">${MITARBEITER.map(n => `<option value="${n}" ${n === state.currentUser ? "selected" : ""}>${n}</option>`).join("")}</select>
+        </div>
+        <div class="today-badge ${hasEntryOn(todayISO(), state.currentUser) ? "done" : "open"}">
+          ${hasEntryOn(todayISO(), state.currentUser) ? "✓ Heute erfasst" : "Heute noch offen"}
+        </div>
+        ${computeStreak(state.currentUser) !== null ? `<div class="streak-badge">🔥 ${computeStreak(state.currentUser)} Arbeitstage in Folge</div>` : ""}
+      </div>
+
+      ${state.view === "admin" ? adminHtml(totalA, totalE, quote) : state.view === "gate" ? gateHtml() : `
+      <button type="button" id="historyToggle" class="history-toggle">${state.historyOpen ? "▴ Verlauf ausblenden" : "▾ Verlauf & Übersicht anzeigen"}</button>
+
+      <div class="tally-wrap" ${state.historyOpen ? "" : 'style="display:none"'}>
+        <div class="tally-head">
+          <div class="eyebrow">Tageserfassung</div>
+          <div class="tally-legend">
+            <span><span class="dot" style="background:var(--pine)"></span>Anfragen</span>
+            <span><span class="dot" style="background:var(--amber)"></span>Auftragserteilungen</span>
+          </div>
+        </div>
+        ${tallyHtml()}
+      </div>
+
+      <div class="cols">
+        <div class="panel anfragen">
+          <div class="panel-head">
+            <div class="panel-title">Anfragen</div>
+            <div class="panel-total">${totalA}</div>
+          </div>
+          <div class="entry-form" id="anfrageForm" ${isLocked() ? 'style="display:none"' : ""}>
+            <div class="row">
+              <div>
+                <label>Datum</label>
+                <input type="date" id="af-datum" value="${todayISO()}" />
+              </div>
+            </div>
+            <label class="chip-label">Dienstleistung</label>
+            ${chipGroup("af", "dienstleistung", DIENSTLEISTUNGEN)}
+            <label class="chip-label">Anfrageart</label>
+            ${chipGroup("af", "anfrageart", ANFRAGEARTEN)}
+            <label class="chip-label">Quelle des Kontakts</label>
+            ${chipGroup("af", "quelle", QUELLEN)}
+            <div class="row-actions">
+              <button type="button" id="af-submit">+ Anfrage erfassen</button>
+              <button type="button" class="ghost-btn" id="af-repeat" ${state.anfragen.length ? "" : "disabled"}>↻ Letzten wiederholen</button>
+            </div>
+          </div>
+          ${isLocked() ? `<div class="locked-banner">🔒 Monat abgeschlossen — keine Bearbeitung mehr möglich</div>` : ""}
+          <table ${state.historyOpen ? "" : 'style="display:none"'}>
+            <thead><tr><th>Datum</th><th>Dienstleistung</th><th>Anfrageart</th><th>Quelle</th><th>Von</th><th></th></tr></thead>
+            <tbody>${anfragenRows()}</tbody>
+          </table>
+        </div>
+
+        <div class="panel erteilungen">
+          <div class="panel-head">
+            <div class="panel-title">Auftragserteilungen</div>
+            <div class="panel-total">${totalE}</div>
+          </div>
+          <div class="entry-form" id="erteilungForm" ${isLocked() ? 'style="display:none"' : ""}>
+            <div class="row">
+              <div>
+                <label>Datum</label>
+                <input type="date" id="ef-datum" value="${todayISO()}" />
+              </div>
+            </div>
+            <label class="chip-label">Dienstleistung</label>
+            ${chipGroup("ef", "dienstleistung", DIENSTLEISTUNGEN)}
+            <div class="row-actions">
+              <button type="button" id="ef-submit">+ Erteilung erfassen</button>
+              <button type="button" class="ghost-btn" id="ef-repeat" ${state.erteilungen.length ? "" : "disabled"}>↻ Letzten wiederholen</button>
+            </div>
+          </div>
+          ${isLocked() ? `<div class="locked-banner">🔒 Monat abgeschlossen — keine Bearbeitung mehr möglich</div>` : ""}
+          <table ${state.historyOpen ? "" : 'style="display:none"'}>
+            <thead><tr><th>Datum</th><th>Dienstleistung</th><th>Von</th><th></th></tr></thead>
+            <tbody>${erteilungenRows()}</tbody>
+          </table>
+        </div>
+      </div>
+      `}
+
+      <div class="footer-strip">
+        <div>Daten werden im Team geteilt — alle Nutzer:innen dieser Webapp sehen dieselbe Monatsliste.</div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span class="status">${state.loading ? "Lädt…" : state.status}</span>
+          <span class="quote-badge">Erteilungsquote: ${quote === null ? "–" : quote + "%"}</span>
+        </div>
+      </div>
+    `;
+
+    document.getElementById("prevMonth").onclick = () => changeMonth(-1);
+    document.getElementById("nextMonth").onclick = () => changeMonth(1);
+    document.getElementById("toggleView").onclick = () => {
+      if (state.view === "entry") {
+        if (state.adminUnlocked) {
+          state.view = "admin";
+          if (!state.adminData) loadAdminData();
+        } else {
+          state.adminCodeError = false;
+          state.view = "gate";
+        }
+      } else {
+        state.view = "entry";
+      }
+      render();
+    };
+
+    const codeInput = document.getElementById("admin-code-input");
+    if (codeInput) {
+      codeInput.focus();
+      codeInput.onkeydown = (ev) => { if (ev.key === "Enter") document.getElementById("admin-code-submit").click(); };
+    }
+    const codeSubmit = document.getElementById("admin-code-submit");
+    if (codeSubmit) {
+      codeSubmit.onclick = () => {
+        const val = document.getElementById("admin-code-input").value;
+        if (val === ADMIN_CODE) {
+          state.adminUnlocked = true;
+          state.adminCodeError = false;
+          state.view = "admin";
+          if (!state.adminData) loadAdminData();
+        } else {
+          state.adminCodeError = true;
+        }
+        render();
+      };
+    }
+
+    const tabMonth = document.getElementById("admin-tab-month");
+    if (tabMonth) tabMonth.onclick = () => { state.adminScope = "month"; render(); };
+    const tabYear = document.getElementById("admin-tab-year");
+    if (tabYear) tabYear.onclick = () => { state.adminScope = "year"; render(); };
+    const prevYearBtn = document.getElementById("prevYear");
+    if (prevYearBtn) prevYearBtn.onclick = () => changeYear(-1);
+    const nextYearBtn = document.getElementById("nextYear");
+    if (nextYearBtn) nextYearBtn.onclick = () => changeYear(1);
+
+
+    document.getElementById("who-select").onchange = (ev) => setCurrentUser(ev.target.value);
+
+    const historyToggle = document.getElementById("historyToggle");
+    if (historyToggle) historyToggle.onclick = () => { state.historyOpen = !state.historyOpen; render(); };
+
+    root.querySelectorAll(".chip").forEach(chip => {
+      chip.onclick = () => {
+        state.form[chip.dataset.form][chip.dataset.field] = chip.dataset.value;
+        render();
+      };
+    });
+
+    const afSubmit = document.getElementById("af-submit");
+    if (afSubmit) {
+      afSubmit.onclick = () => {
+        const datum = document.getElementById("af-datum").value;
+        const { dienstleistung, anfrageart, quelle } = state.form.af;
+        if (!datum) { state.status = "Bitte Datum wählen"; render(); return; }
+        if (!dienstleistung || !anfrageart || !quelle) { state.status = "Bitte alle Felder auswählen"; render(); return; }
+        addAnfrage({ datum, dienstleistung, anfrageart, quelle, wer: state.currentUser });
+      };
+    }
+    const afRepeat = document.getElementById("af-repeat");
+    if (afRepeat) afRepeat.onclick = () => repeatLast("anfragen");
+
+    const efSubmit = document.getElementById("ef-submit");
+    if (efSubmit) {
+      efSubmit.onclick = () => {
+        const datum = document.getElementById("ef-datum").value;
+        const { dienstleistung } = state.form.ef;
+        if (!datum) { state.status = "Bitte Datum wählen"; render(); return; }
+        if (!dienstleistung) { state.status = "Bitte Dienstleistung auswählen"; render(); return; }
+        addErteilung({ datum, dienstleistung, wer: state.currentUser });
+      };
+    }
+    const efRepeat = document.getElementById("ef-repeat");
+    if (efRepeat) efRepeat.onclick = () => repeatLast("erteilungen");
+
+    root.querySelectorAll(".del-btn").forEach(btn => {
+      btn.onclick = () => removeEntry(btn.dataset.list, btn.dataset.id);
+    });
+  }
+
+  render();
+  loadCurrentUser().then(render);
+  load();
+})();
+</script>
