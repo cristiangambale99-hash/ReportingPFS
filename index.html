@@ -174,19 +174,27 @@
   .who-select {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     font-size: 12px;
     color: var(--ink-soft);
   }
   .who-select label { font-weight: 700; }
-  .who-select select {
-    padding: 5px 8px;
+  .who-chips { display: flex; gap: 6px; }
+  .who-chip {
+    padding: 6px 14px;
     border: 1px solid var(--line);
-    border-radius: 6px;
-    font-size: 12px;
-    font-family: inherit;
     background: #fff;
+    border-radius: 20px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ink);
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
   }
+  .who-chip:hover { border-color: var(--pine); }
+  .who-chip:active { transform: scale(0.96); }
+  .who-chip.active { background: var(--ink); color: #fff; border-color: var(--ink); }
   .today-badge {
     font-size: 12px;
     font-weight: 700;
@@ -606,10 +614,10 @@
 (function () {
   const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
   const DIENSTLEISTUNGEN = ["wöchentlich", "14-täglich", "monatlich"];
-  const ANFRAGEARTEN = ["Homepage", "Telefonisch", "E-Mail"];
-  const QUELLEN = ["Suchmaschine", "Social Media", "Weiterempfehlung", "Fahrzeugwerbung"];
+  const ANFRAGEARTEN = ["Homepage", "Telefonisch", "E-Mail", "Aktion"];
+  const QUELLEN = ["Suchmaschine", "Social Media", "Weiterempfehlung", "Fahrzeugwerbung", "Cross-Selling"];
   const MITARBEITER = ["Fiorella", "Tayron"];
-  const ADMIN_CODE = "AdminPFS";
+  const ADMIN_CODE = "Clean+26";
   const MOTIV_MESSAGES = [
     "Stark erfasst! 💪",
     "Sauber gemacht ✅",
@@ -654,8 +662,8 @@
     toastVisible: false,
     toastTimer: null,
     form: {
-      af: { dienstleistung: null, anfrageart: null, quelle: null },
-      ef: { dienstleistung: null },
+      af: { kunde: "", dienstleistung: null, anfrageart: null, quelle: null },
+      ef: { kunde: "", dienstleistung: null },
     },
   };
 
@@ -690,8 +698,8 @@
   }
 
   function resetForm(formKey) {
-    if (formKey === "af") state.form.af = { dienstleistung: null, anfrageart: null, quelle: null };
-    else state.form.ef = { dienstleistung: null };
+    if (formKey === "af") state.form.af = { kunde: "", dienstleistung: null, anfrageart: null, quelle: null };
+    else state.form.ef = { kunde: "", dienstleistung: null };
   }
 
   function chipGroup(formKey, field, options) {
@@ -858,11 +866,29 @@
     const arr = state[list];
     if (!arr.length) return;
     const last = arr[arr.length - 1];
-    const copy = { ...last, id: uid(), datum: todayISO(), wer: state.currentUser };
-    arr.push(copy);
-    arr.sort((a, b) => a.datum.localeCompare(b.datum));
-    triggerMotivation();
-    save();
+    if (list === "anfragen") {
+      // Kundenname wird bewusst NICHT übernommen — muss für jede Anfrage neu eingegeben werden
+      state.form.af = {
+        kunde: "",
+        dienstleistung: last.dienstleistung,
+        anfrageart: last.anfrageart,
+        quelle: last.quelle,
+      };
+      state.status = "Kategorien übernommen — bitte Kundenname eintragen";
+      render();
+      const kundeInput = document.getElementById("af-kunde");
+      if (kundeInput) kundeInput.focus();
+      return;
+    }
+    if (list === "erteilungen") {
+      // Kundenname wird bewusst NICHT übernommen — muss für jede Erteilung neu eingegeben werden
+      state.form.ef = { kunde: "", dienstleistung: last.dienstleistung };
+      state.status = "Kategorien übernommen — bitte Kundenname eintragen";
+      render();
+      const kundeInput = document.getElementById("ef-kunde");
+      if (kundeInput) kundeInput.focus();
+      return;
+    }
   }
   function removeEntry(list, id) {
     state[list] = state[list].filter(e => e.id !== id);
@@ -899,10 +925,11 @@
 
   function anfragenRows() {
     if (!state.anfragen.length) {
-      return `<tr class="empty-row"><td colspan="6">Noch keine Anfragen für diesen Monat erfasst.</td></tr>`;
+      return `<tr class="empty-row"><td colspan="7">Noch keine Anfragen für diesen Monat erfasst.</td></tr>`;
     }
     return state.anfragen.map(e => `
       <tr>
+        <td>${e.kunde || "–"}</td>
         <td>${fmtDate(e.datum)}</td>
         <td>${e.dienstleistung}</td>
         <td>${e.anfrageart}</td>
@@ -913,10 +940,11 @@
   }
   function erteilungenRows() {
     if (!state.erteilungen.length) {
-      return `<tr class="empty-row"><td colspan="4">Noch keine Auftragserteilungen für diesen Monat erfasst.</td></tr>`;
+      return `<tr class="empty-row"><td colspan="5">Noch keine Auftragserteilungen für diesen Monat erfasst.</td></tr>`;
     }
     return state.erteilungen.map(e => `
       <tr>
+        <td>${e.kunde || "–"}</td>
         <td>${fmtDate(e.datum)}</td>
         <td>${e.dienstleistung}</td>
         <td>${e.wer || "–"}</td>
@@ -1174,16 +1202,20 @@
         </div>
       </div>
 
+      ${state.view === "entry" ? `
       <div class="status-row">
         <div class="who-select">
           <label>Ich bin</label>
-          <select id="who-select">${MITARBEITER.map(n => `<option value="${n}" ${n === state.currentUser ? "selected" : ""}>${n}</option>`).join("")}</select>
+          <div class="who-chips">
+            ${MITARBEITER.map(n => `<button type="button" class="who-chip ${n === state.currentUser ? "active" : ""}" data-user="${n}">${n}</button>`).join("")}
+          </div>
         </div>
         <div class="today-badge ${hasEntryOn(todayISO(), state.currentUser) ? "done" : "open"}">
           ${hasEntryOn(todayISO(), state.currentUser) ? "✓ Heute erfasst" : "Heute noch offen"}
         </div>
         ${computeStreak(state.currentUser) !== null ? `<div class="streak-badge">🔥 ${computeStreak(state.currentUser)} Arbeitstage in Folge</div>` : ""}
       </div>
+      ` : ""}
 
       ${state.view === "admin" ? adminHtml(totalA, totalE, quote) : state.view === "gate" ? gateHtml() : `
       <button type="button" id="historyToggle" class="history-toggle">${state.historyOpen ? "▴ Verlauf ausblenden" : "▾ Verlauf & Übersicht anzeigen"}</button>
@@ -1208,6 +1240,10 @@
           <div class="entry-form" id="anfrageForm" ${isLocked() ? 'style="display:none"' : ""}>
             <div class="row">
               <div>
+                <label>Kundenname</label>
+                <input type="text" id="af-kunde" placeholder="Name des Kunden" value="${state.form.af.kunde || ""}" />
+              </div>
+              <div>
                 <label>Datum</label>
                 <input type="date" id="af-datum" value="${todayISO()}" />
               </div>
@@ -1220,12 +1256,12 @@
             ${chipGroup("af", "quelle", QUELLEN)}
             <div class="row-actions">
               <button type="button" id="af-submit">+ Anfrage erfassen</button>
-              <button type="button" class="ghost-btn" id="af-repeat" ${state.anfragen.length ? "" : "disabled"}>↻ Letzten wiederholen</button>
+              <button type="button" class="ghost-btn" id="af-repeat" ${state.anfragen.length ? "" : "disabled"}>↻ Kategorien übernehmen</button>
             </div>
           </div>
           ${isLocked() ? `<div class="locked-banner">🔒 Monat abgeschlossen — keine Bearbeitung mehr möglich</div>` : ""}
           <table ${state.historyOpen ? "" : 'style="display:none"'}>
-            <thead><tr><th>Datum</th><th>Dienstleistung</th><th>Anfrageart</th><th>Quelle</th><th>Von</th><th></th></tr></thead>
+            <thead><tr><th>Kunde</th><th>Datum</th><th>Dienstleistung</th><th>Anfrageart</th><th>Quelle</th><th>Von</th><th></th></tr></thead>
             <tbody>${anfragenRows()}</tbody>
           </table>
         </div>
@@ -1238,6 +1274,10 @@
           <div class="entry-form" id="erteilungForm" ${isLocked() ? 'style="display:none"' : ""}>
             <div class="row">
               <div>
+                <label>Kundenname</label>
+                <input type="text" id="ef-kunde" placeholder="Name des Kunden" value="${state.form.ef.kunde || ""}" />
+              </div>
+              <div>
                 <label>Datum</label>
                 <input type="date" id="ef-datum" value="${todayISO()}" />
               </div>
@@ -1246,12 +1286,12 @@
             ${chipGroup("ef", "dienstleistung", DIENSTLEISTUNGEN)}
             <div class="row-actions">
               <button type="button" id="ef-submit">+ Erteilung erfassen</button>
-              <button type="button" class="ghost-btn" id="ef-repeat" ${state.erteilungen.length ? "" : "disabled"}>↻ Letzten wiederholen</button>
+              <button type="button" class="ghost-btn" id="ef-repeat" ${state.erteilungen.length ? "" : "disabled"}>↻ Kategorien übernehmen</button>
             </div>
           </div>
           ${isLocked() ? `<div class="locked-banner">🔒 Monat abgeschlossen — keine Bearbeitung mehr möglich</div>` : ""}
           <table ${state.historyOpen ? "" : 'style="display:none"'}>
-            <thead><tr><th>Datum</th><th>Dienstleistung</th><th>Von</th><th></th></tr></thead>
+            <thead><tr><th>Kunde</th><th>Datum</th><th>Dienstleistung</th><th>Von</th><th></th></tr></thead>
             <tbody>${erteilungenRows()}</tbody>
           </table>
         </div>
@@ -1315,7 +1355,9 @@
     if (nextYearBtn) nextYearBtn.onclick = () => changeYear(1);
 
 
-    document.getElementById("who-select").onchange = (ev) => setCurrentUser(ev.target.value);
+    root.querySelectorAll(".who-chip").forEach(chip => {
+      chip.onclick = () => setCurrentUser(chip.dataset.user);
+    });
 
     const historyToggle = document.getElementById("historyToggle");
     if (historyToggle) historyToggle.onclick = () => { state.historyOpen = !state.historyOpen; render(); };
@@ -1331,12 +1373,16 @@
     if (afSubmit) {
       afSubmit.onclick = () => {
         const datum = document.getElementById("af-datum").value;
+        const kunde = document.getElementById("af-kunde").value.trim();
         const { dienstleistung, anfrageart, quelle } = state.form.af;
+        if (!kunde) { state.status = "Bitte Kundenname eintragen"; render(); return; }
         if (!datum) { state.status = "Bitte Datum wählen"; render(); return; }
         if (!dienstleistung || !anfrageart || !quelle) { state.status = "Bitte alle Felder auswählen"; render(); return; }
-        addAnfrage({ datum, dienstleistung, anfrageart, quelle, wer: state.currentUser });
+        addAnfrage({ kunde, datum, dienstleistung, anfrageart, quelle, wer: state.currentUser });
       };
     }
+    const afKunde = document.getElementById("af-kunde");
+    if (afKunde) afKunde.oninput = (ev) => { state.form.af.kunde = ev.target.value; };
     const afRepeat = document.getElementById("af-repeat");
     if (afRepeat) afRepeat.onclick = () => repeatLast("anfragen");
 
@@ -1344,12 +1390,16 @@
     if (efSubmit) {
       efSubmit.onclick = () => {
         const datum = document.getElementById("ef-datum").value;
+        const kunde = document.getElementById("ef-kunde").value.trim();
         const { dienstleistung } = state.form.ef;
+        if (!kunde) { state.status = "Bitte Kundenname eintragen"; render(); return; }
         if (!datum) { state.status = "Bitte Datum wählen"; render(); return; }
         if (!dienstleistung) { state.status = "Bitte Dienstleistung auswählen"; render(); return; }
-        addErteilung({ datum, dienstleistung, wer: state.currentUser });
+        addErteilung({ kunde, datum, dienstleistung, wer: state.currentUser });
       };
     }
+    const efKunde = document.getElementById("ef-kunde");
+    if (efKunde) efKunde.oninput = (ev) => { state.form.ef.kunde = ev.target.value; };
     const efRepeat = document.getElementById("ef-repeat");
     if (efRepeat) efRepeat.onclick = () => repeatLast("erteilungen");
 
