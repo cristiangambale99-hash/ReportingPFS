@@ -57,6 +57,7 @@
     box-sizing: border-box;
     position: relative;
     z-index: 1;
+    overflow-x: hidden;
   }
   #pfs-app * { box-sizing: border-box; }
   .heading-font { font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif; }
@@ -94,6 +95,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-wrap: wrap;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   }
   .month-nav button {
@@ -264,6 +266,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-wrap: wrap;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     margin-bottom: 16px;
   }
@@ -1041,7 +1044,9 @@
   const SIDEBAR_LINE_2 = "Hauswartungsservice & Facilitymanagement   Fahrzeugreinigung   Spezialreinigung   Produkte-/Reinigungsmittel   Academy";
   const PAGE_MARGIN_L = 20;
   const PAGE_MARGIN_R = 34; // reserviert Platz für die türkise Serviceleiste am rechten Rand
-  const CONTENT_BOTTOM = 250; // ab hier neue Seite, Platz für Fusszeile lassen
+  const PAGE_MARGIN_TOP = 42; // reserviert Platz für Logo/Adresszeile — Tabellen dürfen erst danach beginnen
+  const PAGE_MARGIN_BOTTOM = 36; // reserviert Platz für die Fusszeile — Tabellen müssen vorher enden
+  const CONTENT_BOTTOM = 297 - PAGE_MARGIN_BOTTOM - 4; // A4-Höhe minus Fusszeile, für manuelle Seitenumbruch-Prüfungen
 
   function drawLetterheadChrome(doc) {
     const pageW = doc.internal.pageSize.getWidth();
@@ -1049,6 +1054,14 @@
 
     // Logo oben rechts
     try { doc.addImage(BRAND_LOGO_B64, "PNG", pageW - 20 - 46, 12, 46, 14.5); } catch (e) {}
+
+    // Adresszeile + Trennlinie oben (auf jeder Seite)
+    doc.setFontSize(8.5);
+    doc.setTextColor(90, 100, 95);
+    doc.setFont(undefined, "normal");
+    doc.text("Clean Service Scaramuzzo AG, Industriestrasse 5, 8307 Effretikon", PAGE_MARGIN_L, 34);
+    doc.setDrawColor(200, 208, 204);
+    doc.line(PAGE_MARGIN_L, 36, pageW - PAGE_MARGIN_R, 36);
 
     // Türkise Serviceleiste am rechten Rand (rotiert, liest von unten nach oben)
     doc.setFontSize(7);
@@ -1073,11 +1086,7 @@
 
   function pdfHeader(doc, subtitle) {
     const marginX = PAGE_MARGIN_L;
-    doc.setFontSize(8.5);
-    doc.setTextColor(90, 100, 95);
-    doc.text("Clean Service Scaramuzzo AG, Industriestrasse 5, 8307 Effretikon", marginX, 34);
-    doc.setDrawColor(200, 208, 204);
-    doc.line(marginX, 36, doc.internal.pageSize.getWidth() - PAGE_MARGIN_R, 36);
+    drawLetterheadChrome(doc);
 
     const availableWidth = doc.internal.pageSize.getWidth() - marginX - PAGE_MARGIN_R;
     doc.setFont(undefined, "bold");
@@ -1094,7 +1103,7 @@
   }
 
   function pdfBreakdownBlock(doc, y, marginX, title, pairs, color) {
-    if (y > CONTENT_BOTTOM) { doc.addPage(); y = 24; }
+    if (y > CONTENT_BOTTOM) { doc.addPage(); y = PAGE_MARGIN_TOP + 8; }
     doc.setFontSize(10.5);
     doc.setTextColor(20, 30, 25);
     doc.text(title, marginX, y);
@@ -1106,7 +1115,7 @@
       theme: "striped",
       headStyles: { fillColor: color, fontSize: 9 },
       styles: { fontSize: 9 },
-      margin: { left: marginX, right: PAGE_MARGIN_R },
+      margin: { left: marginX, right: PAGE_MARGIN_R, top: PAGE_MARGIN_TOP, bottom: PAGE_MARGIN_BOTTOM },
       didDrawPage: () => drawLetterheadChrome(doc),
     });
     return doc.lastAutoTable.finalY + 7;
@@ -1141,7 +1150,7 @@
         ],
         theme: "grid",
         headStyles: { fillColor: [26, 159, 160] },
-        margin: { left: marginX, right: PAGE_MARGIN_R },
+        margin: { left: marginX, right: PAGE_MARGIN_R, top: PAGE_MARGIN_TOP, bottom: PAGE_MARGIN_BOTTOM },
         didDrawPage: () => drawLetterheadChrome(doc),
       });
       y = doc.lastAutoTable.finalY + 9;
@@ -1193,7 +1202,7 @@
         ],
         theme: "grid",
         headStyles: { fillColor: [26, 159, 160] },
-        margin: { left: marginX, right: PAGE_MARGIN_R },
+        margin: { left: marginX, right: PAGE_MARGIN_R, top: PAGE_MARGIN_TOP, bottom: PAGE_MARGIN_BOTTOM },
         didDrawPage: () => drawLetterheadChrome(doc),
       });
       y = doc.lastAutoTable.finalY + 9;
@@ -1203,7 +1212,7 @@
       y = pdfBreakdownBlock(doc, y, marginX, "Anfragen nach Quelle", countBy(anfragen, "quelle"), [26, 159, 160]);
       y = pdfBreakdownBlock(doc, y, marginX, "Nach Mitarbeiter:in erfasst", countBy(anfragen.concat(erteilungen), "wer"), [26, 159, 160]);
 
-      if (y > CONTENT_BOTTOM) { doc.addPage(); y = 24; }
+      if (y > CONTENT_BOTTOM) { doc.addPage(); y = PAGE_MARGIN_TOP + 8; }
       doc.setFontSize(10.5);
       doc.setTextColor(20, 30, 25);
       doc.text("Monate im Jahr", marginX, y);
@@ -1223,7 +1232,7 @@
         theme: "grid",
         headStyles: { fillColor: [26, 159, 160] },
         styles: { fontSize: 9 },
-        margin: { left: marginX, right: PAGE_MARGIN_R },
+        margin: { left: marginX, right: PAGE_MARGIN_R, top: PAGE_MARGIN_TOP, bottom: PAGE_MARGIN_BOTTOM },
         didDrawPage: () => drawLetterheadChrome(doc),
       });
 
@@ -1298,8 +1307,8 @@
             <button id="prevYear">‹</button>
             <div class="year-label">${state.year}</div>
             <button id="nextYear">›</button>
-            <button type="button" id="pdf-export-year" class="pdf-btn">📄 Jahresbericht als PDF</button>
           </div>
+          <button type="button" id="pdf-export-year" class="pdf-btn pdf-btn-month">📄 Jahresbericht als PDF</button>
           <div class="headline">${headline(yTotalA, yTotalE, yQuote, prevY, "im Vorjahr")}</div>
           <div class="kpi-row">
             <div class="kpi-card">
