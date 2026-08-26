@@ -668,6 +668,92 @@
   .status { font-size: 11px; color: var(--ink-soft); }
 </style>
 
+<script type="module">
+  // Gemeinsamer Speicher über Firebase Firestore — alle Nutzer:innen (jedes Gerät,
+  // jeder Browser) sehen dieselben Daten. Fällt auf gerätelokalen Speicher zurück,
+  // falls Firebase aus irgendeinem Grund nicht erreichbar ist (App bleibt nutzbar).
+  window.__storageReadyPromise = (async () => {
+    function installLocalStorageFallback() {
+      const LS_PREFIX = "pfs-storage:";
+      window.storage = {
+        async get(key) {
+          const raw = localStorage.getItem(LS_PREFIX + key);
+          if (raw === null) throw new Error("not found");
+          return { key, value: raw };
+        },
+        async set(key, value) {
+          localStorage.setItem(LS_PREFIX + key, value);
+          return { key, value };
+        },
+        async delete(key) {
+          localStorage.removeItem(LS_PREFIX + key);
+          return { key, deleted: true };
+        },
+        async list(prefix) {
+          const keys = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith(LS_PREFIX)) {
+              const bare = k.slice(LS_PREFIX.length);
+              if (!prefix || bare.startsWith(prefix)) keys.push(bare);
+            }
+          }
+          return { keys };
+        },
+      };
+    }
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB7fzA-CpVf1TLfLD0Y2mJKTOQhROhJGA4",
+      authDomain: "reporting-clean-service.firebaseapp.com",
+      projectId: "reporting-clean-service",
+      storageBucket: "reporting-clean-service.firebasestorage.app",
+      messagingSenderId: "752863467506",
+      appId: "1:752863467506:web:49bd2461dedd2d5fc8fd6b",
+    };
+
+    if (firebaseConfig.apiKey.startsWith("__FIREBASE")) {
+      // Noch nicht konfiguriert — gerätelokaler Speicher als Übergangslösung.
+      installLocalStorageFallback();
+      return;
+    }
+
+    try {
+      const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
+      const { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs } =
+        await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
+
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+      const COLL = "pfs_storage";
+
+      window.storage = {
+        async get(key) {
+          const snap = await getDoc(doc(db, COLL, key));
+          if (!snap.exists()) throw new Error("not found");
+          return { key, value: snap.data().value };
+        },
+        async set(key, value) {
+          await setDoc(doc(db, COLL, key), { key, value });
+          return { key, value };
+        },
+        async delete(key) {
+          await deleteDoc(doc(db, COLL, key));
+          return { key, deleted: true };
+        },
+        async list(prefix) {
+          const end = prefix + "\uf8ff";
+          const q = query(collection(db, COLL), where("key", ">=", prefix), where("key", "<", end));
+          const snap = await getDocs(q);
+          return { keys: snap.docs.map(d => d.id) };
+        },
+      };
+    } catch (e) {
+      console.warn("Firebase nicht erreichbar, nutze gerätelokalen Speicher:", e);
+      installLocalStorageFallback();
+    }
+  })();
+</script>
 <script>
 (function () {
   const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
@@ -1559,6 +1645,7 @@
     state.adminUnlocked = false;
     state.adminData = null;
     render();
+    await (window.__storageReadyPromise || Promise.resolve());
     await loadCurrentUser();
     load();
   }
@@ -1805,11 +1892,13 @@
   if (urlDivision) {
     state.division = urlDivision;
     state.view = "entry";
-    render();
-    loadCurrentUser().then(render);
-    load();
-  } else {
-    render();
   }
+  render();
+  (window.__storageReadyPromise || Promise.resolve()).then(() => {
+    if (state.division) {
+      loadCurrentUser().then(render);
+      load();
+    }
+  });
 })();
 </script>
