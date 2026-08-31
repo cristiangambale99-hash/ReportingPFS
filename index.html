@@ -627,15 +627,6 @@
     font-size: 12px;
   }
   tbody tr:hover { background: #fafaf6; }
-  .del-btn {
-    border: none;
-    background: none;
-    color: var(--danger);
-    cursor: pointer;
-    font-size: 15px;
-    line-height: 1;
-    padding: 2px 4px;
-  }
   .empty-row td {
     text-align: center;
     color: var(--ink-soft);
@@ -1098,10 +1089,7 @@
       return;
     }
   }
-  function removeEntry(list, id) {
-    state[list] = state[list].filter(e => e.id !== id);
-    save();
-  }
+  // Einträge sind nach dem Erfassen bewusst nicht mehr löschbar (Datenintegrität)
 
   function optionsHtml(arr) {
     return arr.map(v => `<option value="${v}">${v}</option>`).join("");
@@ -1133,7 +1121,7 @@
 
   function anfragenRows() {
     if (!state.anfragen.length) {
-      return `<tr class="empty-row"><td colspan="7">Noch keine Anfragen für diesen Monat erfasst.</td></tr>`;
+      return `<tr class="empty-row"><td colspan="6">Noch keine Anfragen für diesen Monat erfasst.</td></tr>`;
     }
     return state.anfragen.map(e => `
       <tr>
@@ -1143,12 +1131,11 @@
         <td>${e.anfrageart}</td>
         <td>${e.quelle}</td>
         <td>${e.wer || "–"}</td>
-        <td>${isLocked() ? "" : `<button class="del-btn" data-list="anfragen" data-id="${e.id}" title="Eintrag löschen">×</button>`}</td>
       </tr>`).join("");
   }
   function erteilungenRows() {
     if (!state.erteilungen.length) {
-      return `<tr class="empty-row"><td colspan="5">Noch keine Auftragserteilungen für diesen Monat erfasst.</td></tr>`;
+      return `<tr class="empty-row"><td colspan="4">Noch keine Auftragserteilungen für diesen Monat erfasst.</td></tr>`;
     }
     return state.erteilungen.map(e => `
       <tr>
@@ -1156,7 +1143,6 @@
         <td>${fmtDate(e.datum)}</td>
         <td>${e.dienstleistung}</td>
         <td>${e.wer || "–"}</td>
-        <td>${isLocked() ? "" : `<button class="del-btn" data-list="erteilungen" data-id="${e.id}" title="Eintrag löschen">×</button>`}</td>
       </tr>`).join("");
   }
 
@@ -1735,7 +1721,7 @@
           </div>
           ${isLocked() ? `<div class="locked-banner">🔒 Monat abgeschlossen — keine Bearbeitung mehr möglich</div>` : ""}
           <table ${state.historyOpen ? "" : 'style="display:none"'}>
-            <thead><tr><th>Kunde</th><th>Datum</th><th>Dienstleistung</th><th>Anfrageart</th><th>Quelle</th><th>Von</th><th></th></tr></thead>
+            <thead><tr><th>Kunde</th><th>Datum</th><th>Dienstleistung</th><th>Anfrageart</th><th>Quelle</th><th>Von</th></tr></thead>
             <tbody>${anfragenRows()}</tbody>
           </table>
         </div>
@@ -1765,7 +1751,7 @@
           </div>
           ${isLocked() ? `<div class="locked-banner">🔒 Monat abgeschlossen — keine Bearbeitung mehr möglich</div>` : ""}
           <table ${state.historyOpen ? "" : 'style="display:none"'}>
-            <thead><tr><th>Kunde</th><th>Datum</th><th>Dienstleistung</th><th>Von</th><th></th></tr></thead>
+            <thead><tr><th>Kunde</th><th>Datum</th><th>Dienstleistung</th><th>Von</th></tr></thead>
             <tbody>${erteilungenRows()}</tbody>
           </table>
         </div>
@@ -1882,10 +1868,6 @@
     if (efKunde) efKunde.oninput = (ev) => { state.form.ef.kunde = ev.target.value; };
     const efRepeat = document.getElementById("ef-repeat");
     if (efRepeat) efRepeat.onclick = () => repeatLast("erteilungen");
-
-    root.querySelectorAll(".del-btn").forEach(btn => {
-      btn.onclick = () => removeEntry(btn.dataset.list, btn.dataset.id);
-    });
   }
 
   const urlDivision = parseDivisionFromUrl();
