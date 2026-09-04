@@ -788,8 +788,15 @@
       anfragearten: ["Homepage", "Telefonisch", "E-Mail", "Aktion"],
       quellen: ["Suchmaschine", "Social Media", "Weiterempfehlung", "Fahrzeugwerbung", "Cross-Selling"],
     },
+    hotelreinigung: {
+      name: "Hotelreinigung",
+      mitarbeiter: ["Diogo", "Sebastian", "Giada"],
+      dienstleistungen: ["Hotelreinigung"],
+      anfragearten: ["Homepage", "Telefonisch", "E-Mail", "Aktion"],
+      quellen: ["Suchmaschine", "Social Media", "Weiterempfehlung", "Fahrzeugwerbung", "Cross-Selling"],
+    },
   };
-  const DIVISION_ORDER = ["pfs", "hauswartung", "unterhaltsreinigung", "spezialreinigung"];
+  const DIVISION_ORDER = ["pfs", "hauswartung", "unterhaltsreinigung", "spezialreinigung", "hotelreinigung"];
   function currentDivision() { return DIVISIONS[state.division] || { name: "", mitarbeiter: [], dienstleistungen: [], anfragearten: [], quellen: [] }; }
   function currentMitarbeiter() { return currentDivision().mitarbeiter; }
   function currentDienstleistungen() { return currentDivision().dienstleistungen; }
