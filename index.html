@@ -610,7 +610,8 @@
   .entry-form button:not(.chip):hover { filter: brightness(1.08); }
   .entry-form button:not(.chip):active { transform: scale(0.98); }
 
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 13px; }
   thead th {
     text-align: left;
     font-size: 10px;
@@ -627,6 +628,15 @@
     font-size: 12px;
   }
   tbody tr:hover { background: #fafaf6; }
+  .del-btn {
+    border: none;
+    background: none;
+    color: var(--danger);
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    padding: 2px 4px;
+  }
   .empty-row td {
     text-align: center;
     color: var(--ink-soft);
@@ -1096,7 +1106,14 @@
       return;
     }
   }
-  // Einträge sind nach dem Erfassen bewusst nicht mehr löschbar (Datenintegrität)
+  // Einträge sind grundsätzlich nach dem Erfassen nicht mehr löschbar (Datenintegrität).
+  // Ausnahme: Putzfrauenservice — dort ist Löschen auf ausdrücklichen Wunsch erlaubt.
+  function canDelete() { return state.division === "pfs" && !isLocked(); }
+  function removeEntry(list, id) {
+    if (!canDelete()) return;
+    state[list] = state[list].filter(e => e.id !== id);
+    save();
+  }
 
   function optionsHtml(arr) {
     return arr.map(v => `<option value="${v}">${v}</option>`).join("");
@@ -1128,7 +1145,7 @@
 
   function anfragenRows() {
     if (!state.anfragen.length) {
-      return `<tr class="empty-row"><td colspan="6">Noch keine Anfragen für diesen Monat erfasst.</td></tr>`;
+      return `<tr class="empty-row"><td colspan="${canDelete() ? 7 : 6}">Noch keine Anfragen für diesen Monat erfasst.</td></tr>`;
     }
     return state.anfragen.map(e => `
       <tr>
@@ -1138,11 +1155,12 @@
         <td>${e.anfrageart}</td>
         <td>${e.quelle}</td>
         <td>${e.wer || "–"}</td>
+        ${canDelete() ? `<td><button class="del-btn" data-list="anfragen" data-id="${e.id}" title="Eintrag löschen">×</button></td>` : ""}
       </tr>`).join("");
   }
   function erteilungenRows() {
     if (!state.erteilungen.length) {
-      return `<tr class="empty-row"><td colspan="4">Noch keine Auftragserteilungen für diesen Monat erfasst.</td></tr>`;
+      return `<tr class="empty-row"><td colspan="${canDelete() ? 5 : 4}">Noch keine Auftragserteilungen für diesen Monat erfasst.</td></tr>`;
     }
     return state.erteilungen.map(e => `
       <tr>
@@ -1150,6 +1168,7 @@
         <td>${fmtDate(e.datum)}</td>
         <td>${e.dienstleistung}</td>
         <td>${e.wer || "–"}</td>
+        ${canDelete() ? `<td><button class="del-btn" data-list="erteilungen" data-id="${e.id}" title="Eintrag löschen">×</button></td>` : ""}
       </tr>`).join("");
   }
 
@@ -1727,10 +1746,12 @@
             </div>
           </div>
           ${isLocked() ? `<div class="locked-banner">🔒 Monat abgeschlossen — keine Bearbeitung mehr möglich</div>` : ""}
-          <table ${state.historyOpen ? "" : 'style="display:none"'}>
-            <thead><tr><th>Kunde</th><th>Datum</th><th>Dienstleistung</th><th>Anfrageart</th><th>Quelle</th><th>Von</th></tr></thead>
-            <tbody>${anfragenRows()}</tbody>
-          </table>
+          <div class="table-scroll" ${state.historyOpen ? "" : 'style="display:none"'}>
+            <table>
+              <thead><tr><th>Kunde</th><th>Datum</th><th>Dienstleistung</th><th>Anfrageart</th><th>Quelle</th><th>Von</th>${canDelete() ? "<th></th>" : ""}</tr></thead>
+              <tbody>${anfragenRows()}</tbody>
+            </table>
+          </div>
         </div>
 
         <div class="panel erteilungen">
@@ -1757,10 +1778,12 @@
             </div>
           </div>
           ${isLocked() ? `<div class="locked-banner">🔒 Monat abgeschlossen — keine Bearbeitung mehr möglich</div>` : ""}
-          <table ${state.historyOpen ? "" : 'style="display:none"'}>
-            <thead><tr><th>Kunde</th><th>Datum</th><th>Dienstleistung</th><th>Von</th></tr></thead>
-            <tbody>${erteilungenRows()}</tbody>
-          </table>
+          <div class="table-scroll" ${state.historyOpen ? "" : 'style="display:none"'}>
+            <table>
+              <thead><tr><th>Kunde</th><th>Datum</th><th>Dienstleistung</th><th>Von</th>${canDelete() ? "<th></th>" : ""}</tr></thead>
+              <tbody>${erteilungenRows()}</tbody>
+            </table>
+          </div>
         </div>
       </div>
       `}
@@ -1875,6 +1898,10 @@
     if (efKunde) efKunde.oninput = (ev) => { state.form.ef.kunde = ev.target.value; };
     const efRepeat = document.getElementById("ef-repeat");
     if (efRepeat) efRepeat.onclick = () => repeatLast("erteilungen");
+
+    root.querySelectorAll(".del-btn").forEach(btn => {
+      btn.onclick = () => removeEntry(btn.dataset.list, btn.dataset.id);
+    });
   }
 
   const urlDivision = parseDivisionFromUrl();
